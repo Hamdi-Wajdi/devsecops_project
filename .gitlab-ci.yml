@@ -1,0 +1,4 @@
+﻿test-runner:
+  tags: [local]
+  script:
+    - echo "Le runner fonctionne"
