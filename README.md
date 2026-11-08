@@ -91,3 +91,16 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+## Politique de blocage du pipeline
+
+Le pipeline CI échoue (bloque) dans les cas suivants :
+- Un secret est détecté dans le dépôt (Gitleaks).
+- Le SAST (Semgrep) trouve un problème des règles Python et OWASP Top 10.
+- Une vulnérabilité CRITICAL corrigeable est trouvée dans les dépendances ou l'image (Trivy).
+
+Les vulnérabilités HIGH sont signalées sans bloquer le pipeline, pour ne pas
+paralyser le développement. Les CVE sans correctif disponible ne bloquent pas,
+car l'équipe ne peut rien y faire.
+
+Limite : un pipeline vert ne garantit pas l'absence de faille.
