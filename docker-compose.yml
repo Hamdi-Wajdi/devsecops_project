@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: helpdesk-db
+    environment:
+      POSTGRES_DB: helpdesk
+      POSTGRES_USER: helpdesk_user
+      POSTGRES_PASSWORD: fictif_postgres_password_123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpdesk_user -d helpdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: helpdesk-web
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: helpdesk
+      DB_USER: helpdesk_user
+      DB_PASSWORD: fictif_postgres_password_123
+      SECRET_KEY: fictif_dev_session_secret_key_98765
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

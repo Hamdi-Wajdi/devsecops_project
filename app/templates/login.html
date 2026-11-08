@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 450px; margin: 3rem auto;">
+    <div class="card">
+        <h2 style="margin-bottom: 1.5rem; text-align: center;">Connexion HelpDesk</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Identifiant</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="ex: alice ou agent_smith" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Se connecter</button>
+        </form>
+
+        <div style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <strong>Comptes fictifs pré-enregistrés :</strong>
+            <ul style="margin-top: 0.5rem; padding-left: 1.2rem;">
+                <li><code>alice</code> / <code>Alice2026!</code> (rôle user)</li>
+                <li><code>bob</code> / <code>Bob2026!</code> (rôle user)</li>
+                <li><code>charlie</code> / <code>Charlie2026!</code> (rôle user)</li>
+                <li><code>agent_smith</code> / <code>AgentSmith2026!</code> (rôle agent)</li>
+                <li><code>agent_clara</code> / <code>AgentClara2026!</code> (rôle agent)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

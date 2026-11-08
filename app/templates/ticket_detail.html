@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('tickets') }}" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Retour à la liste</a>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+            <h2>Ticket #{{ ticket.id }} : {{ ticket.title }}</h2>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+                Créé par <strong>{{ ticket.author_full_name }}</strong> (<code>{{ ticket.author_username }}</code>) le {{ ticket.created_at }}
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span class="badge badge-{{ ticket.priority }}">Priorité : {{ ticket.priority }}</span>
+            <span class="badge badge-{{ ticket.status }}">Statut : {{ ticket.status }}</span>
+        </div>
+    </div>
+
+    <div style="background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); margin: 1.5rem 0; line-height: 1.6;">
+        <h4 style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem;">Description du problème :</h4>
+        <p style="white-space: pre-wrap;">{{ ticket.description }}</p>
+    </div>
+
+    {% if session.get('role') == 'agent' %}
+        <div style="background: #1e293b; border: 1px solid var(--border-color); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <form method="POST" action="{{ url_for('update_status', ticket_id=ticket.id) }}" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <label for="status" style="font-weight: 500; font-size: 0.9rem;">Changer le statut du ticket :</label>
+                <select name="status" id="status" class="form-control" style="width: auto;">
+                    <option value="OPEN" {% if ticket.status == 'OPEN' %}selected{% endif %}>OPEN</option>
+                    <option value="IN_PROGRESS" {% if ticket.status == 'IN_PROGRESS' %}selected{% endif %}>IN_PROGRESS</option>
+                    <option value="RESOLVED" {% if ticket.status == 'RESOLVED' %}selected{% endif %}>RESOLVED</option>
+                    <option value="CLOSED" {% if ticket.status == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Mettre à jour</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Section Commentaires -->
+<div class="card">
+    <h3 style="margin-bottom: 1rem;">Échanges et commentaires ({{ comments|length }})</h3>
+
+    {% if comments %}
+        {% for c in comments %}
+            <div class="comment-box">
+                <div class="comment-header">
+                    <span>
+                        <strong>{{ c.author_full_name }}</strong>
+                        {% if c.author_role == 'agent' %}
+                            <span class="badge badge-tag" style="background: #0284c7;">Support IT</span>
+                        {% endif %}
+                    </span>
+                    <span>{{ c.created_at }}</span>
+                </div>
+                <!-- ========================================================================= -->
+                <!-- FAILLE 3 (VOLONTAIRE) : XSS Stocké via filtre safe non échappé             -->
+                <!-- ========================================================================= -->
+                <div class="comment-body" style="font-size: 0.95rem;">
+                    {{ c.content | safe }}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Aucun commentaire pour le moment.</p>
+    {% endif %}
+
+    <!-- Formulaire d'ajout de commentaire -->
+    <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+        <h4 style="margin-bottom: 0.75rem; font-size: 1rem;">Ajouter une réponse :</h4>
+        <form method="POST" action="{{ url_for('add_comment', ticket_id=ticket.id) }}">
+            <div class="form-group">
+                <textarea name="content" class="form-control" rows="3" placeholder="Écrivez votre message ici..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Publier la réponse</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

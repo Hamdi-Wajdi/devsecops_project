@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2>
+                {% if session.get('role') == 'agent' %}
+                    Tous les tickets du support (Vue Agent)
+                {% else %}
+                    Mes tickets d'assistance
+                {% endif %}
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                Consultez l'historique de vos demandes ou effectuez une recherche par mot-clé.
+            </p>
+        </div>
+        {% if session.get('role') == 'user' %}
+            <a href="{{ url_for('new_ticket') }}" class="btn btn-primary">+ Ouvrir un ticket</a>
+        {% endif %}
+    </div>
+
+    <!-- Barre de recherche vulnérable à l'injection SQL -->
+    <form method="GET" action="{{ url_for('search_tickets') }}" class="search-bar">
+        <input type="text" name="q" class="form-control" placeholder="Rechercher dans les tickets par mot-clé..." value="{{ search_query }}">
+        <button type="submit" class="btn btn-secondary">Rechercher</button>
+        {% if search_query %}
+            <a href="{{ url_for('tickets') }}" class="btn btn-secondary">Réinitialiser</a>
+        {% endif %}
+    </form>
+
+    {% if search_query %}
+        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+            Résultats de recherche pour : <code>{{ search_query }}</code> ({{ tickets|length }} résultat(s))
+        </p>
+    {% endif %}
+
+    {% if tickets %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#ID</th>
+                        <th>Titre du ticket</th>
+                        {% if session.get('role') == 'agent' %}
+                            <th>Demandeur</th>
+                        {% endif %}
+                        <th>Priorité</th>
+                        <th>Statut</th>
+                        <th>Date de création</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                        <tr>
+                            <td>#{{ t.id }}</td>
+                            <td>
+                                <strong><a href="{{ url_for('ticket_detail', ticket_id=t.id) }}" style="color: var(--text-main); text-decoration: none;">{{ t.title }}</a></strong>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+                                    {{ t.description[:80] }}{% if t.description|length > 80 %}...{% endif %}
+                                </div>
+                            </td>
+                            {% if session.get('role') == 'agent' %}
+                                <td>{{ t.author_full_name or t.author_username or ('User #' ~ t.user_id) }}</td>
+                            {% endif %}
+                            <td><span class="badge badge-{{ t.priority }}">{{ t.priority }}</span></td>
+                            <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+                            <td style="color: var(--text-muted); font-size: 0.85rem;">{{ t.created_at }}</td>
+                            <td>
+                                <a href="{{ url_for('ticket_detail', ticket_id=t.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">Voir</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted); padding: 2rem 0; text-align: center;">Aucun ticket trouvé.</p>
+    {% endif %}
+</div>
+{% endblock %}

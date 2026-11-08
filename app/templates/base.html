@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelpDesk DevSecOps - Assistance & Tickets</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="navbar-brand">
+            🎫 HelpDesk IT
+            <span class="badge-tag">LAB VULNÉRABLE</span>
+        </a>
+        <div class="navbar-menu">
+            {% if session.get('user_id') %}
+                <span>Connecté : <strong>{{ session.get('full_name') }}</strong> (<em>{{ session.get('role') }}</em>)</span>
+                <a href="{{ url_for('tickets') }}">Mes tickets</a>
+                {% if session.get('role') == 'user' %}
+                    <a href="{{ url_for('new_ticket') }}" class="btn btn-primary" style="padding: 0.3rem 0.7rem;">+ Nouveau ticket</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}">Déconnexion</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Connexion</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alerts">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if error_code %}
+            <div class="card" style="text-align: center; padding: 3rem 1rem;">
+                <h1 style="color: #ef4444; font-size: 2.5rem; margin-bottom: 1rem;">Erreur {{ error_code }}</h1>
+                <p>{{ error_message }}</p>
+                <div style="margin-top: 1.5rem;">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">Retour à l'accueil</a>
+                </div>
+            </div>
+        {% else %}
+            {% block content %}{% endblock %}
+        {% endif %}
+    </div>
+</body>
+</html>
