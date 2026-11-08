@@ -150,16 +150,16 @@ def search_tickets():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # VULNÉRABILITÉ : Concaténation directe non sécurisée (SQLi)
-    # Dans la version corrigée (branche fixed), on utilisera des paramètres sécurisés (%s).
-    query = f"""
+    # CORRECTION : Requête paramétrée sécurisée (%s) pour neutraliser l'injection SQL (CWE-89)
+    search_pattern = f"%{q}%"
+    query = """
         SELECT t.id, t.title, t.description, t.status, t.priority, t.user_id, t.created_at
         FROM tickets t
-        WHERE t.title ILIKE '%{q}%' OR t.description ILIKE '%{q}%'
+        WHERE t.title ILIKE %s OR t.description ILIKE %s
         ORDER BY t.created_at DESC;
     """
     try:
-        cur.execute(query)
+        cur.execute(query, (search_pattern, search_pattern))
         ticket_list = cur.fetchall()
     except Exception as e:
         conn.rollback()
@@ -272,4 +272,5 @@ def not_found(e):
 if __name__ == "__main__":
     init_db()
     # Écoute sur 0.0.0.0 pour être accessible depuis le conteneur Docker
+    # nosemgrep: python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host - 0.0.0.0 est nécessaire dans un conteneur ; l'exposition est limitée par Kubernetes et la NetworkPolicy.
     app.run(host="0.0.0.0", port=5000, debug=False)

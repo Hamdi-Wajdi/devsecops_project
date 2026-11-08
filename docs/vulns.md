@@ -10,6 +10,7 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
 - [3. Cross-Site Scripting stocké (XSS Stocké)](#3-cross-site-scripting-stocké-xss-stocké)
 - [4. Secret fictif codé en dur (Hardcoded Secret)](#4-secret-fictif-codé-en-dur-hardcoded-secret)
 - [5. Composant obsolète avec vulnérabilité connue (CVE)](#5-composant-obsolète-avec-vulnérabilité-connue-cve)
+- [6. Exécution du conteneur en root (Security Misconfiguration)](#6-exécution-du-conteneur-en-root-security-misconfiguration)
 
 ---
 
@@ -55,6 +56,33 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
       (pattern, pattern)
   )
   ```
+- **Correctif appliqué (branche `fixed`)** :
+  - **Avant (`app/app.py`)** :
+    ```python
+    query = f"""
+        SELECT t.id, t.title, t.description, t.status, t.priority, t.user_id, t.created_at
+        FROM tickets t
+        WHERE t.title ILIKE '%{q}%' OR t.description ILIKE '%{q}%'
+        ORDER BY t.created_at DESC;
+    """
+    try:
+        cur.execute(query)
+        ticket_list = cur.fetchall()
+    ```
+  - **Après (`app/app.py`)** :
+    ```python
+    search_pattern = f"%{q}%"
+    query = """
+        SELECT t.id, t.title, t.description, t.status, t.priority, t.user_id, t.created_at
+        FROM tickets t
+        WHERE t.title ILIKE %s OR t.description ILIKE %s
+        ORDER BY t.created_at DESC;
+    """
+    try:
+        cur.execute(query, (search_pattern, search_pattern))
+        ticket_list = cur.fetchall()
+    ```
+  - **Explication** : Le motif de recherche (`search_pattern`) est passé sous forme de tuple de paramètres `(%s)` géré par le pilote `psycopg2`. La requête n'interprète plus l'entrée utilisateur comme du code SQL, ce qui neutralise complètement les attaques de type SQLi.
 
 ---
 
@@ -167,3 +195,58 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
   Werkzeug>=3.0.3
   Flask>=3.0.3
   ```
+
+---
+
+## 6. Exécution du conteneur en root (Security Misconfiguration)
+
+- **Catégorie OWASP Top 10** : A05:2021 – Security Misconfiguration
+- **CWE associée** : CWE-250 (Execution with Unnecessary Privileges)
+- **Emplacement** : `app/Dockerfile`, directive `USER`.
+- **Cause technique** :
+  L'image Docker ne spécifiait aucune directive `USER` non privilégiée. Par défaut, le moteur de conteneur exécute l'interpréteur Python sous l'identité `root` (UID 0, GID 0).
+- **Impact** :
+  En cas d'exploitation d'une vulnérabilité applicative ou d'évasion de conteneur (*container breakout*), l'attaquant dispose des pleins privilèges root à l'intérieur du conteneur, lui permettant de modifier des fichiers système, d'installer des paquets ou d'interagir avec les interfaces du noyau Linux de l'hôte.
+- **Preuve de concept (PoC)** :
+  1. Construire l'image Docker initiale :
+     ```bash
+     docker build -t helpdesk:vulnerable app/
+     ```
+  2. Vérifier l'utilisateur par défaut à l'exécution :
+     ```bash
+     docker run --rm helpdesk:vulnerable id
+     # Sortie : uid=0(root) gid=0(root) groups=0(root)
+     ```
+  3. L'analyse statique du Dockerfile avec Semgrep (`dockerfile.security.missing-user.missing-user`) ou Trivy config déclenche une alerte de sécurité.
+- **Correctif appliqué (branche `fixed`)** :
+  - **Avant (`app/Dockerfile`)** :
+    ```dockerfile
+    # Copie du code applicatif
+    COPY . .
+
+    EXPOSE 5000
+
+    # Lancement de l'application Flask
+    CMD ["python", "app.py"]
+    ```
+  - **Après (`app/Dockerfile`)** :
+    ```dockerfile
+    # Création d'un utilisateur non-root (droits uniquement sur /app)
+    RUN useradd -u 10001 -m -s /bin/bash appuser
+
+    # Copie du code applicatif
+    COPY --chown=appuser:appuser . .
+
+    # Droits stricts uniquement sur /app
+    RUN chown -R appuser:appuser /app
+
+    USER appuser
+
+    # L'application écoute sur le port 5000 (> 1024, compatible non-root)
+    EXPOSE 5000
+
+    # Lancement de l'application Flask
+    CMD ["python", "app.py"]
+    ```
+  - **Explication** : L'utilisateur non privilégié `appuser` (UID 10001) est créé avec un environnement restreint. Le répertoire applicatif `/app` lui est attribué exclusivement via `chown`. L'instruction `USER appuser` garantit l'abandon des privilèges root avant l'exécution du `CMD`. Le port d'écoute 5000 étant supérieur à 1024, aucune capacité réseau spéciale (`CAP_NET_BIND_SERVICE`) n'est requise.
+
