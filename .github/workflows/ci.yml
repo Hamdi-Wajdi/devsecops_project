@@ -19,7 +19,7 @@ jobs:
       - name: Gitleaks (valeurs masquees)
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
-            detect --source /repo --config /repo/.gitleaks.toml --verbose --redact --no-banner --exit-code 1
+            detect --source /repo --no-git --config /repo/.gitleaks.toml --verbose --redact --no-banner --exit-code 1
 
   sast:
     name: SAST (Semgrep)
