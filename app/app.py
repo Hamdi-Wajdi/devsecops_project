@@ -197,10 +197,12 @@ def ticket_detail(ticket_id):
         conn.close()
         abort(404)
 
-    # VULNÉRABILITÉ : Manque du contrôle d'autorisation :
-    # if session['role'] != 'agent' and ticket['user_id'] != session['user_id']:
-    #     abort(403)
-    # N'importe quel utilisateur connecté peut donc accéder au ticket d'un tiers !
+    # CORRECTION : Contrôle d'accès strict (CWE-639 / Broken Access Control)
+    # Seul l'auteur du ticket ou un agent de support technique peut consulter le ticket
+    if session.get("role") != "agent" and ticket["user_id"] != session.get("user_id"):
+        cur.close()
+        conn.close()
+        abort(403)
 
     # Récupération des commentaires
     cur.execute("""

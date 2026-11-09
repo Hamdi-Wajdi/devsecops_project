@@ -110,6 +110,62 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
   if session.get("role") != "agent" and ticket["user_id"] != session.get("user_id"):
       abort(403)
   ```
+- **Correctif appliqué (branche `fixed`)** :
+  - **Avant (`app/app.py`)** :
+    ```python
+    cur.execute("""
+        SELECT t.*, u.username AS author_username, u.full_name AS author_full_name
+        FROM tickets t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.id = %s;
+    """, (ticket_id,))
+    ticket = cur.fetchone()
+
+    if not ticket:
+        cur.close()
+        conn.close()
+        abort(404)
+
+    # Récupération des commentaires
+    ```
+  - **Après (`app/app.py`)** :
+    ```python
+    cur.execute("""
+        SELECT t.*, u.username AS author_username, u.full_name AS author_full_name
+        FROM tickets t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.id = %s;
+    """, (ticket_id,))
+    ticket = cur.fetchone()
+
+    if not ticket:
+        cur.close()
+        conn.close()
+        abort(404)
+
+    # Contrôle d'autorisation strict : auteur du ticket ou rôle agent uniquement
+    if session.get("role") != "agent" and ticket["user_id"] != session.get("user_id"):
+        cur.close()
+        conn.close()
+        abort(403)
+
+    # Récupération des commentaires
+    ```
+  - **Explication** : L'accès aux tickets est dorénavant subordonné à la vérification de l'identité de l'utilisateur connecté (`session['user_id'] == ticket['user_id']`) ou de son privilège métier (`session['role'] == 'agent'`). Tout accès illégitime déclenche immédiatement une erreur HTTP 403 (Forbidden).
+  - **Commande de test** :
+    ```bash
+    # 1. Connexion en tant qu'Alice (utilisateur standard id=1)
+    curl -c cookies_alice.txt -d "username=alice&password=Alice2026!" -X POST http://localhost:5000/login
+
+    # 2. Tentative d'accès non autorisé au ticket #7 (appartenant à Bob)
+    curl -b cookies_alice.txt -s -o /dev/null -w "%{http_code}" http://localhost:5000/tickets/7
+    # Résultat attendu : 403 (accès bloqué au lieu de 200)
+
+    # 3. Connexion en tant qu'Agent Smith et accès au même ticket #7
+    curl -c cookies_agent.txt -d "username=agent_smith&password=AgentSmith2026!" -X POST http://localhost:5000/login
+    curl -b cookies_agent.txt -s -o /dev/null -w "%{http_code}" http://localhost:5000/tickets/7
+    # Résultat attendu : 200 (l'agent conserve un accès légitime à tous les tickets)
+    ```
 
 ---
 
@@ -146,6 +202,32 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
       {{ c.content }}
   </div>
   ```
+- **Correctif appliqué (branche `fixed`)** :
+  - **Avant (`app/templates/ticket_detail.html`)** :
+    ```html
+    <div class="comment-body" style="font-size: 0.95rem;">
+        {{ c.content | safe }}
+    </div>
+    ```
+  - **Après (`app/templates/ticket_detail.html`)** :
+    ```html
+    <div class="comment-body" style="font-size: 0.95rem;">
+        {{ c.content }}
+    </div>
+    ```
+  - **Explication** : La suppression du filtre `| safe` réactive l'auto-échappement contextuel natif du moteur Jinja2. Les caractères spéciaux HTML (`<`, `>`, `&`, `"`, `'`) injectés dans les commentaires sont automatiquement convertis en entités HTML sûres (`&lt;`, `&gt;`, `&amp;`, `&#34;`, `&#39;`), neutralisant toute exécution de code JavaScript injecté dans le navigateur.
+  - **Commande de test** :
+    ```bash
+    # 1. Connexion en tant qu'Alice
+    curl -c cookies_alice.txt -d "username=alice&password=Alice2026!" -X POST http://localhost:5000/login
+
+    # 2. Publication d'un commentaire contenant une charge utile XSS sur son ticket #1
+    curl -b cookies_alice.txt -d "content=<script>alert('XSS-Stored-HelpDesk')</script>" -X POST http://localhost:5000/tickets/1/comment
+
+    # 3. Vérification de l'échappement HTML des balises injectées dans le corps de la page
+    curl -b cookies_alice.txt -s http://localhost:5000/tickets/1 | grep -F "&lt;script&gt;alert"
+    # Résultat attendu : La balise est encodée sous forme &lt;script&gt; et aucune balise brute <script> n'est exécutée
+    ```
 
 ---
 

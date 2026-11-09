@@ -57,10 +57,11 @@
                     <span>{{ c.created_at }}</span>
                 </div>
                 <!-- ========================================================================= -->
-                <!-- FAILLE 3 (VOLONTAIRE) : XSS Stocké via filtre safe non échappé             -->
+                <!-- CORRECTION : Neutralisation du XSS par auto-échappement Jinja2 (CWE-79)   -->
+                <!-- Le filtre | safe a été supprimé pour laisser Jinja2 encoder les balises HTML -->
                 <!-- ========================================================================= -->
                 <div class="comment-body" style="font-size: 0.95rem;">
-                    {{ c.content | safe }}
+                    {{ c.content }}
                 </div>
             </div>
         {% endfor %}
