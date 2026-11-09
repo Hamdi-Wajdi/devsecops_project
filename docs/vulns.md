@@ -155,14 +155,14 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
   - **Commande de test** :
     ```bash
     # 1. Connexion en tant qu'Alice (utilisateur standard id=1)
-    curl -c cookies_alice.txt -d "username=alice&password=Alice2026!" -X POST http://localhost:5000/login
+    curl -c cookies_alice.txt -d "username=alice&password=<MOT_DE_PASSE_ALICE>" -X POST http://localhost:5000/login
 
     # 2. Tentative d'accès non autorisé au ticket #7 (appartenant à Bob)
     curl -b cookies_alice.txt -s -o /dev/null -w "%{http_code}" http://localhost:5000/tickets/7
     # Résultat attendu : 403 (accès bloqué au lieu de 200)
 
     # 3. Connexion en tant qu'Agent Smith et accès au même ticket #7
-    curl -c cookies_agent.txt -d "username=agent_smith&password=AgentSmith2026!" -X POST http://localhost:5000/login
+    curl -c cookies_agent.txt -d "username=agent_smith&password=<MOT_DE_PASSE_AGENT>" -X POST http://localhost:5000/login
     curl -b cookies_agent.txt -s -o /dev/null -w "%{http_code}" http://localhost:5000/tickets/7
     # Résultat attendu : 200 (l'agent conserve un accès légitime à tous les tickets)
     ```
@@ -219,7 +219,7 @@ Ce document recense les 5 vulnérabilités de sécurité introduites délibéré
   - **Commande de test** :
     ```bash
     # 1. Connexion en tant qu'Alice
-    curl -c cookies_alice.txt -d "username=alice&password=Alice2026!" -X POST http://localhost:5000/login
+    curl -c cookies_alice.txt -d "username=alice&password=<MOT_DE_PASSE_ALICE>" -X POST http://localhost:5000/login
 
     # 2. Publication d'un commentaire contenant une charge utile XSS sur son ticket #1
     curl -b cookies_alice.txt -d "content=<script>alert('XSS-Stored-HelpDesk')</script>" -X POST http://localhost:5000/tickets/1/comment
