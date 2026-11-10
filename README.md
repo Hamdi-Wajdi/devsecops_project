@@ -99,8 +99,6 @@ Le pipeline CI échoue (bloque) dans les cas suivants :
 - Le SAST (Semgrep) trouve un problème des règles Python et OWASP Top 10.
 - Une vulnérabilité CRITICAL corrigeable est trouvée dans les dépendances ou l'image (Trivy).
 
-Les vulnérabilités HIGH sont signalées sans bloquer le pipeline, pour ne pas
-paralyser le développement. Les CVE sans correctif disponible ne bloquent pas,
-car l'équipe ne peut rien y faire.
+Les vulnérabilités HIGH sont signalées sans bloquer le pipeline, pour ne pas paralyser le développement. Les CVE sans correctif disponible ne bloquent pas, car l'équipe ne peut rien y faire.
 
 Limite : un pipeline vert ne garantit pas l'absence de faille.
